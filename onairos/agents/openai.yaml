@@ -1,0 +1,4 @@
+interface:
+  display_name: "Onairos for Hermes"
+  short_description: "Connect your Onairos persona to Hermes"
+  default_prompt: "Use $onairos to connect and sync my Onairos persona into Hermes memory."
