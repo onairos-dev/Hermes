@@ -33,10 +33,10 @@ def _invalid_response(message: str) -> dict:
     return {"ok": False, "error": "invalid_response", "message": message}
 
 
-def _session_request() -> urllib.request.Request:
+def _session_request(edge: bool = False) -> urllib.request.Request:
     return urllib.request.Request(
         f"{API_BASE}/mcp/hermes/session",
-        data=b"{}",
+        data=json.dumps({"mode": "edge"} if edge else {}).encode("utf-8"),
         method="POST",
         headers={
             "Content-Type": "application/json",
@@ -59,6 +59,7 @@ def connect(
     state_dir: Path | str | None = None,
     urlopen=default_urlopen,
     browser_open=webbrowser.open,
+    edge: bool = False,
 ) -> dict:
     """Create a one-time Onairos session and open the consent page."""
     if not valid_session_key(session_key):
@@ -71,7 +72,7 @@ def connect(
     target_dir = Path(state_dir) if state_dir is not None else default_state_dir()
     target_path = state_path(session_key, target_dir)
     try:
-        payload = request_json(_session_request(), urlopen)
+        payload = request_json(_session_request(edge), urlopen)
     except urllib.error.HTTPError as error:
         return service_error("start the connection", error.code)
     except urllib.error.URLError as error:
@@ -93,7 +94,7 @@ def connect(
             "message": "Could not save the private connection state.",
         }
 
-    connect_url = f"{CONNECT_BASE}/connect?session={session_id}"
+    connect_url = f"{CONNECT_BASE}/{'edge' if edge else 'connect'}?session={session_id}"
     browser_opened = _open_browser(connect_url, browser_open)
     message = (
         "Complete the connection in your browser."
@@ -126,7 +127,7 @@ def _poll_connection(
     monotonic,
     timeout_seconds: float,
     poll_interval_seconds: float,
-) -> tuple[str | None, dict | None]:
+) -> tuple[str | None, dict | None, dict | None]:
     deadline = monotonic() + max(0.0, float(timeout_seconds))
     while True:
         try:
@@ -134,24 +135,24 @@ def _poll_connection(
         except urllib.error.HTTPError as error:
             if error.code == 404:
                 delete_state(target_path)
-                return None, {
+                return None, None, {
                     "ok": False,
                     "error": "expired",
                     "message": "The connection expired. Connect again.",
                 }
-            return None, service_error("check the connection", error.code)
+            return None, None, service_error("check the connection", error.code)
         except urllib.error.URLError as error:
-            return None, network_error(error, "check the connection")
+            return None, None, network_error(error, "check the connection")
         except (TimeoutError, OSError) as error:
-            return None, network_error(error, "check the connection")
+            return None, None, network_error(error, "check the connection")
         except (UnicodeError, ValueError, json.JSONDecodeError):
-            return None, _invalid_response("Onairos returned an invalid status. Try again.")
+            return None, None, _invalid_response("Onairos returned an invalid status. Try again.")
 
         status_value = payload.get("status")
         if status_value == "pending":
             remaining = deadline - monotonic()
             if remaining <= 0:
-                return None, {
+                return None, None, {
                     "ok": False,
                     "error": "pending",
                     "message": "Finish the connection in your browser, then try sync again.",
@@ -159,17 +160,17 @@ def _poll_connection(
             sleep(min(max(0.01, float(poll_interval_seconds)), remaining))
             continue
         if status_value != "complete":
-            return None, _invalid_response("Onairos returned an invalid status. Try again.")
+            return None, None, _invalid_response("Onairos returned an invalid status. Try again.")
 
         delete_state(target_path)
         token = payload.get("token")
         if not isinstance(token, str) or not token:
-            return None, {
+            return None, None, {
                 "ok": False,
                 "error": "consumed",
                 "message": "The one-time connection was consumed. Connect again.",
             }
-        return token, None
+        return token, payload, None
 
 
 def _traits_request(token: str) -> urllib.request.Request:
@@ -216,7 +217,7 @@ def sync(
             "message": "The saved connection was invalid. Connect again.",
         }
 
-    token, poll_error = _poll_connection(
+    token, relay_payload, poll_error = _poll_connection(
         session_id,
         target_path,
         urlopen=urlopen,
@@ -236,8 +237,10 @@ def sync(
             "error": "consumed",
             "message": "The one-time connection was consumed before traits loaded. Connect again.",
         }
+    contacts = relay_payload.get("contacts", []) if isinstance(relay_payload, dict) else []
     return {
         "ok": True,
         "status": "complete",
         "persona": format_persona(traits_payload),
+        **({"contacts": contacts, "contact_count": len(contacts)} if contacts else {}),
     }

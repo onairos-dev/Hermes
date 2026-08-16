@@ -16,6 +16,8 @@ Restart Hermes after installation. To skip the confirmation prompt, append `--ye
 
 ## Connect your profile
 
+To review a CSV/vCard roster and load it into the same one-time session, run the helper with `connect --edge`; the browser opens the Onairos Edge dashboard before the normal profile connection.
+
 In Hermes, run:
 
 ```text

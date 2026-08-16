@@ -41,6 +41,8 @@ def _build_parser() -> argparse.ArgumentParser:
         subparser = subparsers.add_parser(command)
         subparser.add_argument("--session-key", required=True)
         subparser.add_argument("--state-dir", type=Path)
+        if command == "connect":
+            subparser.add_argument("--edge", action="store_true")
     return parser
 
 
@@ -48,6 +50,8 @@ def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     kwargs = {"state_dir": args.state_dir} if args.state_dir is not None else {}
     operation = connect if args.command == "connect" else sync
+    if args.command == "connect":
+        kwargs["edge"] = args.edge
     result = operation(args.session_key, **kwargs)
     print(json.dumps(result, ensure_ascii=True, separators=(",", ":")))
     return 0 if result.get("ok") else 1
