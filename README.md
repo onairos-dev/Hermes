@@ -49,7 +49,7 @@ The skill does not send a raw activity dump to Hermes.
 - One-time access tokens remain in process memory and are never shown to Hermes.
 - Only allowlisted, sanitized persona fields are returned to the agent.
 - Hermes writes through its own memory tool; the skill never edits memory files directly.
-- Connection links expire after ten minutes, and completed results cannot be reused.
+- Connection links expire after one hour, and completed results cannot be reused.
 
 ## Refresh your profile
 

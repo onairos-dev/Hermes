@@ -4,7 +4,7 @@ This reference explains the helper's internal contract; it is not permission for
 
 ## State machine
 
-1. `connect` creates a ten-minute relay session with `POST https://api2.onairos.uk/mcp/hermes/session`.
+1. `connect` creates a one-hour relay session with `POST https://api2.onairos.uk/mcp/hermes/session`.
 2. The helper validates the returned UUID, stores only that ID in private local state, and opens `https://onairos.io/connect?session=<uuid>`.
 3. The user signs in and explicitly chooses which sources to connect in the browser.
 4. `sync` polls `GET https://api2.onairos.uk/mcp/hermes/result/<uuid>` only after the user confirms completion.
@@ -27,7 +27,7 @@ This reference explains the helper's internal contract; it is not permission for
 | --- | --- | --- |
 | `pending` | Browser consent is not complete | Ask the user to finish, then wait |
 | `no_session` | Connect was not run for this Hermes session | Start a fresh connection |
-| `expired` | The ten-minute relay no longer exists | Start a fresh connection |
+| `expired` | The one-hour relay no longer exists | Start a fresh connection |
 | `invalid_state` | Local session state failed validation | Start a fresh connection |
 | `invalid_session` | Hermes supplied no safe session identity | Stop without connecting |
 | `consumed` | The one-time result cannot be reused | Start a fresh connection |
