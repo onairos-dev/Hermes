@@ -57,7 +57,7 @@ The command prints one JSON object. When `ok` is true:
 
 1. Tell the user whether the browser opened.
 2. Give them `connect_url` as a clickable fallback.
-3. Ask them to sign in, approve the sources they choose, wait for **Profile synced**, then return and say **done**. Mention that the link expires in ten minutes.
+3. Ask them to sign in, approve the sources they choose, wait for **Profile synced**, then return and say **done**. Mention that the link expires in one hour.
 4. End the turn. Do not poll or sync yet.
 
 If `ok` is false, explain the `message` once, include `reason` or `status` when present, and stop. Tell the user they can ask you to retry, but do not run anything else until they do. Do not invent a URL. For `invalid_session`, stop: Hermes did not supply a safe session identity, so the flow must not continue. If the helper is missing, cannot start, or emits no valid JSON, report that the local skill installation is incomplete and suggest reinstalling it; never replace the helper with a request for credentials or raw profile data.
